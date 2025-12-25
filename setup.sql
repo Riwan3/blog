@@ -8,7 +8,9 @@ CREATE TABLE `users` (
   `password` varchar(255) NOT NULL,
   `role` ENUM('admin', 'editor', 'kontributor') NOT NULL DEFAULT 'kontributor',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  INDEX `idx_username` (`username`),
+  INDEX `idx_role` (`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
@@ -27,5 +29,11 @@ CREATE TABLE `posts` (
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  FOREIGN KEY (`author_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  FOREIGN KEY (`author_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+  INDEX `idx_status` (`status`),
+  INDEX `idx_author_id` (`author_id`),
+  INDEX `idx_created_at` (`created_at`),
+  INDEX `idx_slug` (`slug`),
+  INDEX `idx_category` (`category`),
+  INDEX `idx_status_created` (`status`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC;

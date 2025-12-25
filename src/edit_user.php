@@ -29,31 +29,55 @@ if ($user_id === (int)$_SESSION['id']) {
     $is_self_edit = true;
 }
 
-// --- Logika untuk menangani POST request (update role) ---
+// --- Logika untuk menangani POST request (update role dan password) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $new_role = $_POST['role'];
+    $new_password = trim($_POST['password'] ?? '');
+    $confirm_password = trim($_POST['confirm_password'] ?? '');
     $allowed_roles = ['admin', 'editor', 'kontributor'];
 
     // Validasi role baru
-    if (in_array($new_role, $allowed_roles)) {
-        // Jika admin mencoba mengubah rolenya sendiri, cegah
-        if ($is_self_edit && $new_role !== 'admin') {
-            $error_message = "Anda tidak dapat mengubah peran Anda sendiri dari admin.";
+    if (!in_array($new_role, $allowed_roles)) {
+        $error_message = "Peran yang dipilih tidak valid.";
+    }
+    // Jika admin mencoba mengubah rolenya sendiri, cegah
+    elseif ($is_self_edit && $new_role !== 'admin') {
+        $error_message = "Anda tidak dapat mengubah peran Anda sendiri dari admin.";
+    }
+    // Validasi password jika diisi
+    elseif (!empty($new_password)) {
+        if (strlen($new_password) < 6) {
+            $error_message = "Password minimal 6 karakter.";
+        } elseif ($new_password !== $confirm_password) {
+            $error_message = "Password dan konfirmasi password tidak cocok.";
         } else {
-            // Update role pengguna di database
-            $sql_update = "UPDATE users SET role = ? WHERE id = ?";
+            // Update role dan password
+            $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+            $sql_update = "UPDATE users SET role = ?, password = ? WHERE id = ?";
             $stmt = mysqli_prepare($link, $sql_update);
-            mysqli_stmt_bind_param($stmt, "si", $new_role, $user_id);
+            mysqli_stmt_bind_param($stmt, "ssi", $new_role, $hashed_password, $user_id);
             if (mysqli_stmt_execute($stmt)) {
-                header('Location: /manage_users.php?success_message=Peran pengguna berhasil diperbarui.');
+                mysqli_stmt_close($stmt);
+                header('Location: /manage_users.php?success_message=Data pengguna berhasil diperbarui.');
                 exit;
             } else {
-                $error_message = "Terjadi kesalahan. Gagal memperbarui peran.";
+                $error_message = "Terjadi kesalahan. Gagal memperbarui data.";
             }
             mysqli_stmt_close($stmt);
         }
     } else {
-        $error_message = "Peran yang dipilih tidak valid.";
+        // Update hanya role (password tidak diubah)
+        $sql_update = "UPDATE users SET role = ? WHERE id = ?";
+        $stmt = mysqli_prepare($link, $sql_update);
+        mysqli_stmt_bind_param($stmt, "si", $new_role, $user_id);
+        if (mysqli_stmt_execute($stmt)) {
+            mysqli_stmt_close($stmt);
+            header('Location: /manage_users.php?success_message=Peran pengguna berhasil diperbarui.');
+            exit;
+        } else {
+            $error_message = "Terjadi kesalahan. Gagal memperbarui peran.";
+        }
+        mysqli_stmt_close($stmt);
     }
 }
 
@@ -78,41 +102,102 @@ mysqli_close($link);
 
 <!DOCTYPE html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Pengguna</title>
-    <link rel="stylesheet" href="/style.css">
-</head>
+<?php $page_title = "Edit Pengguna"; include "includes/head.php"; ?>
+
 <body>
-    <div class="main-container">
-        <div class="dashboard-header">
-            <h1>Edit Peran Pengguna: <?= htmlspecialchars($username) ?></h1>
-            <a href="/manage_users.php" class="button-primary" style="background-color: #5bc0de;">Batal</a>
+    <div class="app-container app-theme-white body-tabs-shadow fixed-sidebar fixed-header closed-sidebar">
+        <?php include "includes/header.php" ?>
+
+        <div class="app-main">
+            <?php include "includes/sidebar.php" ?>
+
+            <div class="app-main__outer">
+                <div class="app-main__inner">
+                    <div class="app-page-title">
+                        <div class="page-title-wrapper">
+                            <div class="page-title-heading">
+                                <div class="page-title-icon">
+                                    <i class="pe-7s-config icon-gradient bg-mean-fruit"></i>
+                                </div>
+                                <div>Edit Peran Pengguna
+                                    <div class="page-title-subheading">Perbarui peran pengguna: <?= htmlspecialchars($username) ?></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="main-card mb-3 card">
+                                <div class="card-header">Form Edit Pengguna</div>
+                                <div class="card-body">
+                                    <?php if($error_message): ?>
+                                        <div class="alert alert-danger" role="alert">
+                                            <?= htmlspecialchars($error_message) ?>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <form action="/edit_user.php?id=<?= $user_id ?>" method="post" class="needs-validation" novalidate>
+                                        <div class="position-relative form-group">
+                                            <label for="username-display">Username</label>
+                                            <input type="text" id="username-display" class="form-control" value="<?= htmlspecialchars($username) ?>" disabled>
+                                            <small class="form-text text-muted">Username tidak dapat diubah</small>
+                                        </div>
+
+                                        <div class="position-relative form-group">
+                                            <label for="role">Peran (Role)</label>
+                                            <select name="role" id="role" class="form-control" <?= $is_self_edit ? 'title="Anda tidak dapat mengubah peran Anda sendiri"' : '' ?>>
+                                                <option value="kontributor" <?= $current_role === 'kontributor' ? 'selected' : '' ?>>Kontributor</option>
+                                                <option value="editor" <?= $current_role === 'editor' ? 'selected' : '' ?>>Editor</option>
+                                                <option value="admin" <?= $current_role === 'admin' ? 'selected' : '' ?>>Admin</option>
+                                            </select>
+                                            <?php if ($is_self_edit): ?>
+                                                <small class="form-text text-muted">Anda tidak dapat mengubah peran Anda sendiri dari 'admin'.</small>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <hr class="my-4">
+                                        <h5 class="mb-3">Ubah Password (Opsional)</h5>
+                                        <p class="text-muted small">Kosongkan jika tidak ingin mengubah password</p>
+
+                                        <div class="position-relative form-group">
+                                            <label for="password">Password Baru</label>
+                                            <input type="password" name="password" id="password" class="form-control" placeholder="Minimal 6 karakter">
+                                            <small class="form-text text-muted">Kosongkan jika tidak ingin mengubah password</small>
+                                        </div>
+
+                                        <div class="position-relative form-group">
+                                            <label for="confirm_password">Konfirmasi Password Baru</label>
+                                            <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="Ulangi password baru">
+                                        </div>
+
+                                        <div class="mt-4">
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="pe-7s-check"></i> Simpan Perubahan
+                                            </button>
+                                            <a href="/manage_users.php" class="btn btn-danger">
+                                                <i class="pe-7s-close"></i> Batal
+                                            </a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <?php if($error_message) echo '<p class="error-message">'.$error_message.'</p>'; ?>
-
-        <form action="/edit_user.php?id=<?= $user_id ?>" method="post" class="post-form">
-            <div class="form-group">
-                <label>Username</label>
-                <input type="text" value="<?= htmlspecialchars($username) ?>" disabled>
-            </div>
-            <div class="form-group">
-                <label for="role">Peran (Role)</label>
-                <select name="role" id="role" <?= $is_self_edit ? 'title="Anda tidak dapat mengubah peran Anda sendiri"' : '' ?>>
-                    <option value="kontributor" <?= $current_role === 'kontributor' ? 'selected' : '' ?>>Kontributor</option>
-                    <option value="editor" <?= $current_role === 'editor' ? 'selected' : '' ?>>Editor</option>
-                    <option value="admin" <?= $current_role === 'admin' ? 'selected' : '' ?>>Admin</option>
-                </select>
-                <?php if ($is_self_edit): ?>
-                <small>Anda tidak dapat mengubah peran Anda sendiri dari 'admin'.</small>
-                <?php endif; ?>
-            </div>
-            <div class="form-group">
-                <button type="submit" class="button-primary">Simpan Perubahan</button>
-            </div>
-        </form>
     </div>
+
+    <?php include "includes/footer.php" ?>
+
+<!--
+  Duta Damai Kalimantan Selatan - Blog System
+  © 2025 Duta Damai Kalimantan Selatan
+
+  Menggunakan komponen dari CMS Jawara
+  © 2020 Djadjoel (MIT License)
+  Repository: https://github.com/djadjoel/cmsjawara
+-->
 </body>
 </html>

@@ -1,0 +1,109 @@
+# Duta Damai Kalimantan Selatan - Blog System
+# Apache Security Configuration
+
+# ============================================
+# 1. PREVENT DIRECTORY LISTING
+# ============================================
+Options -Indexes
+
+# ============================================
+# 2. PROTECT CONFIG FILES
+# ============================================
+<FilesMatch "^(config\.php|security\.php|\.env|\.git|\.htaccess|\.htpasswd)">
+    Require all denied
+</FilesMatch>
+
+# ============================================
+# 3. PROTECT SENSITIVE DIRECTORIES
+# ============================================
+<DirectoryMatch "^\.|\/\.">
+    Require all denied
+</DirectoryMatch>
+
+# ============================================
+# 4. BLOCK ACCESS TO BACKUP FILES
+# ============================================
+<FilesMatch "\.(bak|backup|old|save|swp|tmp|log)$">
+    Require all denied
+</FilesMatch>
+
+# ============================================
+# 5. PREVENT PHP EXECUTION IN UPLOAD FOLDERS
+# ============================================
+<Directory "/home/feri/blog/assets/images">
+    php_flag engine off
+</Directory>
+
+# ============================================
+# 6. SECURITY HEADERS
+# ============================================
+<IfModule mod_headers.c>
+    # XSS Protection
+    Header set X-XSS-Protection "1; mode=block"
+
+    # Clickjacking Protection
+    Header set X-Frame-Options "SAMEORIGIN"
+
+    # MIME Type Sniffing Protection
+    Header set X-Content-Type-Options "nosniff"
+
+    # Referrer Policy
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Remove Server Information
+    Header unset Server
+    Header unset X-Powered-By
+
+    # Content Security Policy
+    Header set Content-Security-Policy "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:;"
+</IfModule>
+
+# ============================================
+# 7. BLOCK SUSPICIOUS USER AGENTS
+# ============================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block bad bots
+    RewriteCond %{HTTP_USER_AGENT} (nikto|sqlmap|fimap|nessus|openvas|metasploit) [NC]
+    RewriteRule .* - [F,L]
+
+    # Block SQL injection attempts
+    RewriteCond %{QUERY_STRING} (union.*select|insert.*into|delete.*from|drop.*table) [NC,OR]
+    RewriteCond %{QUERY_STRING} (concat|char\(|benchmark|load_file) [NC,OR]
+    RewriteCond %{QUERY_STRING} (<script|eval\(|base64_) [NC]
+    RewriteRule .* - [F,L]
+</IfModule>
+
+# ============================================
+# 8. LIMIT FILE UPLOAD SIZE (adjust as needed)
+# ============================================
+php_value upload_max_filesize 5M
+php_value post_max_size 6M
+
+# ============================================
+# 9. DISABLE PHP ERRORS IN PRODUCTION
+# ============================================
+php_flag display_errors off
+php_flag display_startup_errors off
+php_value error_reporting 0
+php_value log_errors On
+php_value error_log /home/feri/blog/logs/php_errors.log
+
+# ============================================
+# 10. SESSION SECURITY
+# ============================================
+php_value session.cookie_httponly 1
+php_value session.cookie_secure 0
+php_value session.use_strict_mode 1
+php_value session.use_only_cookies 1
+
+# ============================================
+# 11. PREVENT HOTLINKING
+# ============================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP_REFERER} !^$
+    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?127\.0\.0\.1 [NC]
+    RewriteRule \.(jpg|jpeg|png|gif)$ - [F,NC,L]
+</IfModule>

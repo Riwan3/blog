@@ -85,7 +85,13 @@ if ($request_uri === '/' || $request_uri === '/index.php') {
 
 } elseif (strpos($_SERVER['REQUEST_URI'], '/create_user.php') === 0) {
     require __DIR__ . '/src/create_user.php';
-    
+
+} elseif (strpos($_SERVER['REQUEST_URI'], '/security_dashboard.php') === 0) {
+    require __DIR__ . '/src/security_dashboard.php';
+
+} elseif (strpos($_SERVER['REQUEST_URI'], '/integrity_checker.php') === 0) {
+    require __DIR__ . '/src/integrity_checker.php';
+
 } else {
     // Jika tidak ada aturan yang cocok, coba cari file di root sebagai fallback
     if(is_file(__DIR__ . $uri)){

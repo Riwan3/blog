@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once "config.php";
+require_once "helpers.php";
 
 function create_slug($title, $link, $post_id = null) {
     $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $title)));
@@ -83,7 +84,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($stmt = mysqli_prepare($link, $sql_update)) {
             mysqli_stmt_bind_param($stmt, "ssssssi", $title, $slug_to_save, $content, $new_image_path, $category, $new_status, $post_id);
             if (mysqli_stmt_execute($stmt)) {
-                header("location: /dashboard.php");
+                // Clear cache
+                clear_post_caches();
+
+                // Redirect dengan pesan sesuai role dan status
+                if ($_SESSION['role'] === 'kontributor' && $new_status === 'draft') {
+                    header("location: /dashboard.php?message=Postingan kamu sudah diupdate, silahkan tunggu editor untuk review");
+                } elseif ($new_status === 'published') {
+                    header("location: /dashboard.php?message=Postingan berhasil dipublikasikan");
+                } else {
+                    header("location: /dashboard.php?message=Postingan berhasil diperbarui");
+                }
                 exit();
             } else {
                 $error = "Gagal memperbarui post.";
@@ -94,83 +105,122 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     mysqli_close($link);
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Edit Postingan</title>
-    <link rel="stylesheet" href="/style.css">
-    <link rel="stylesheet" href="/auth.css">
-    <link rel="icon" href="/assets/default_post_image.jpeg" type="image/jpeg">
-    <script src="https://cdn.ckeditor.com/4.22.1/full/ckeditor.js"></script>
-</head>
+<?php $page_title = "Edit Postingan"; include "includes/head.php"; ?>
+
 <body>
-    <div class="main-container">
-         <div class="editor-container">
-            <form action="<?= htmlspecialchars($_SERVER["PHP_SELF"]) . '?id=' . $post_id; ?>" method="post" class="auth-form editor-form" enctype="multipart/form-data">
-                <h2>Edit Postingan</h2>
-                <?php if ($error): ?><p class="error-message"><?= htmlspecialchars($error) ?></p><?php endif; ?>
-                <div class="tab-nav">
-                    <button type="button" class="tab-button active" data-tab="tab-konten">Konten</button>
-                    <button type="button" class="tab-button" data-tab="tab-pengaturan">Pengaturan</button>
-                </div>
-                <div id="tab-konten" class="tab-content active">
-                    <div class="form-group">
-                        <label>Judul</label>
-                        <input type="text" name="title" class="form-control" value="<?= htmlspecialchars($title); ?>">
-                    </div>    
-                    <div class="form-group">
-                        <label>Konten</label>
-                        <textarea name="content" id="editor" class="form-control" rows="10"><?= htmlspecialchars($content); ?></textarea>
+    <div class="app-container app-theme-white body-tabs-shadow fixed-sidebar fixed-header closed-sidebar">
+        <?php include "includes/header.php" ?>
+
+        <div class="app-main">
+            <?php include "includes/sidebar.php" ?>
+
+            <div class="app-main__outer">
+                <div class="app-main__inner">
+                    <div class="app-page-title">
+                        <div class="page-title-wrapper">
+                            <div class="page-title-heading">
+                                <div class="page-title-icon">
+                                    <i class="pe-7s-note2 icon-gradient bg-mean-fruit"></i>
+                                </div>
+                                <div>Edit Postingan
+                                    <div class="page-title-subheading">Perbarui postingan yang sudah ada</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="main-card mb-3 card">
+                                <div class="card-header">Form Edit Postingan</div>
+                                <div class="card-body">
+                                    <?php if ($error): ?>
+                                        <div class="alert alert-danger" role="alert">
+                                            <?= htmlspecialchars($error) ?>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <form action="<?= htmlspecialchars($_SERVER["PHP_SELF"]) . '?id=' . $post_id; ?>" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                                        <div class="position-relative form-group">
+                                            <label for="title">Judul Postingan</label>
+                                            <input name="title" id="title" type="text" class="form-control" required value="<?= htmlspecialchars($title); ?>">
+                                        </div>
+
+                                        <div class="position-relative form-group">
+                                            <label for="category">Kategori</label>
+                                            <input name="category" id="category" type="text" class="form-control" placeholder="Contoh: Teknologi, Berita" value="<?= htmlspecialchars($category); ?>">
+                                        </div>
+
+                                        <div class="position-relative form-group">
+                                            <label for="post_image">Ganti Gambar Utama (Opsional)</label>
+                                            <input name="post_image" id="post_image" type="file" class="form-control-file" accept="image/*">
+                                            <small class="form-text text-muted">Format: JPG, PNG, GIF. Maksimal 5MB</small>
+                                            <?php if (!empty($image_url)): ?>
+                                                <div class="mt-2">
+                                                    <img src="<?= htmlspecialchars($image_url); ?>" alt="Gambar saat ini" style="max-width: 200px; height: auto; border: 1px solid #ddd; padding: 5px;">
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div class="position-relative form-group">
+                                            <label for="editor">Konten</label>
+                                            <textarea name="content" id="editor" class="form-control" rows="10" required><?= htmlspecialchars($content); ?></textarea>
+                                        </div>
+
+                                        <div class="mt-4">
+                                            <?php if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'editor'): ?>
+                                                <button type="submit" name="publish" class="btn btn-success">
+                                                    <i class="pe-7s-check"></i> Publikasikan
+                                                </button>
+                                                <button type="submit" name="draft" class="btn btn-secondary">
+                                                    <i class="pe-7s-diskette"></i> Simpan Draf
+                                                </button>
+                                            <?php else: ?>
+                                                <button type="submit" name="pending" class="btn btn-primary">
+                                                    <i class="pe-7s-paper-plane"></i> Kirim untuk Review
+                                                </button>
+                                                <button type="submit" name="draft" class="btn btn-secondary">
+                                                    <i class="pe-7s-diskette"></i> Simpan Draf
+                                                </button>
+                                            <?php endif; ?>
+                                            <a href="/dashboard.php" class="btn btn-danger">
+                                                <i class="pe-7s-close"></i> Batal
+                                            </a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div id="tab-pengaturan" class="tab-content">
-                    <div class="form-group">
-                        <label>Kategori</label>
-                        <input type="text" name="category" class="form-control" placeholder="Contoh: Teknologi, Berita" value="<?= htmlspecialchars($category); ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>Ganti Gambar Utama (Opsional)</label>
-                        <input type="file" name="post_image" class="form-control">
-                        <?php if (!empty($image_url)): ?>
-                            <p>Gambar saat ini:</p>
-                            <img src="<?= htmlspecialchars($image_url); ?>" alt="Gambar saat ini" style="max-width: 200px; height: auto; margin-top: 10px;">
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <?php if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'editor'): ?>
-                        <input type="submit" name="publish" class="auth-button" value="Publikasikan">
-                        <input type="submit" name="draft" class="auth-button" value="Simpan Draf" style="background-color: #6c757d;">
-                    <?php else: // Kontributor ?>
-                        <input type="submit" name="pending" class="auth-button" value="Kirim untuk Review">
-                        <input type="submit" name="draft" class="auth-button" value="Simpan Draf" style="background-color: #6c757d;">
-                    <?php endif; ?>
-                    <a href="/dashboard.php" class="auth-button" style="background-color: #f44336; text-align: center; display: block; margin-top: 10px;">Batal</a>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
-<script>
-    CKEDITOR.stylesSet.add('my_styles', [
-        { name: 'Indent Paragraf', element: 'p', styles: { 'text-indent': '40px' } }
-    ]);
-    CKEDITOR.replace( 'editor', {
-        stylesSet: 'my_styles',
-        extraCss: 'p { text-indent: 40px; }'
-    });
-    document.addEventListener('DOMContentLoaded', function() {
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-                this.classList.add('active');
-                document.getElementById(this.dataset.tab).classList.add('active');
-            });
+
+    <?php include "includes/footer.php" ?>
+
+    <script src="https://cdn.ckeditor.com/4.22.1/full/ckeditor.js"></script>
+    <script>
+        CKEDITOR.stylesSet.add('my_styles', [
+            { name: 'Indent Paragraf', element: 'p', styles: { 'text-indent': '40px' } }
+        ]);
+        CKEDITOR.replace('editor', {
+            stylesSet: 'my_styles',
+            extraCss: 'p { text-indent: 40px; }',
+            height: 400
         });
-    });
-</script>
+    </script>
+
+<!--
+  Duta Damai Kalimantan Selatan - Blog System
+  © 2025 Duta Damai Kalimantan Selatan
+
+  Menggunakan komponen dari CMS Jawara
+  © 2020 Djadjoel (MIT License)
+  Repository: https://github.com/djadjoel/cmsjawara
+-->
 </body>
 </html>

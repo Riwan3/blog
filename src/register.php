@@ -73,37 +73,78 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - Blog Saya</title>
-    <link rel="stylesheet" href="/auth.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Registrasi Blog Duta Damai Kalimantan Selatan">
+    <meta name="author" content="Duta Damai Kalsel">
+    <title>Register - Blog Duta Damai Kalsel</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        .bd-placeholder-img {
+            font-size: 1.125rem;
+            text-anchor: middle;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        @media (min-width: 768px) {
+            .bd-placeholder-img-lg {
+                font-size: 3.5rem;
+            }
+        }
+    </style>
+
+    <!-- Custom signin styles -->
+    <link href="/assets/css/signin.css" rel="stylesheet">
     <link rel="icon" href="/assets/default_post_image.jpeg" type="image/jpeg">
 </head>
-<body>
-    <div class="auth-container">
-        <form class="auth-form" method="POST" action="/register.php">
-            <h2>Register</h2>
-            <?php if ($error): ?>
-                <p class="error-message"><?= htmlspecialchars($error) ?></p>
-            <?php endif; ?>
-             <?php if (isset($_GET['success'])): ?>
-                <p class="success-message">Registrasi berhasil! Silakan login.</p>
-            <?php endif; ?>
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required value="<?= htmlspecialchars($username); ?>">
+<body class="text-center">
+    <form class="form-signin" method="POST" action="/register.php" autocomplete="off">
+        <img class="mb-4" src="/assets/default_post_image.jpeg" alt="Logo" width="72" height="72" style="border-radius: 12px;">
+        <h1 class="h3 mb-3 font-weight-normal">Daftar Akun Baru</h1>
+
+        <?php if (isset($_GET['success'])): ?>
+            <div class="alert alert-success" role="alert">
+                Registrasi berhasil! Silakan login.
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+        <?php endif; ?>
+
+        <?php if ($error): ?>
+            <div class="alert alert-danger" role="alert">
+                <?= htmlspecialchars($error) ?>
             </div>
-            <div class="form-group">
-                <label for="confirm_password">Konfirmasi Password</label>
-                <input type="password" id="confirm_password" name="confirm_password" required>
-            </div>
-            <button type="submit" class="auth-button">Register</button>
-            <p class="auth-switch">Sudah punya akun? <a href="/login.php">Login di sini</a></p>
-        </form>
-    </div>
+        <?php endif; ?>
+
+        <label for="username" class="sr-only">Username</label>
+        <input type="text" id="username" class="form-control" placeholder="Masukkan username" name="username" required autofocus value="<?= htmlspecialchars($username); ?>">
+
+        <label for="password" class="sr-only">Password</label>
+        <input type="password" id="password" class="form-control" placeholder="Password (min. 6 karakter)" name="password" required>
+
+        <label for="confirm_password" class="sr-only">Konfirmasi Password</label>
+        <input type="password" id="confirm_password" class="form-control" placeholder="Konfirmasi password" name="confirm_password" required>
+
+        <button class="btn btn-lg btn-primary btn-block mt-3" type="submit">Daftar</button>
+
+        <p class="mt-3 mb-2">
+            <a href="/login.php" class="text-primary">Sudah punya akun? Login di sini</a>
+        </p>
+
+        <p class="mt-5 mb-3 text-muted">&copy; 2025 Duta Damai Kalsel</p>
+    </form>
+
+<!--
+  Duta Damai Kalimantan Selatan - Blog System
+  © 2025 Duta Damai Kalimantan Selatan
+
+  Menggunakan komponen dari CMS Jawara
+  © 2020 Djadjoel (MIT License)
+  Repository: https://github.com/djadjoel/cmsjawara
+-->
 </body>
 </html>

@@ -69,51 +69,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <!DOCTYPE html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buat Pengguna Baru</title>
-    <link rel="stylesheet" href="/style.css">
-</head>
+<?php $page_title = "Buat Pengguna Baru"; include "includes/head.php"; ?>
+
 <body>
-    <div class="main-container">
-        <div class="dashboard-header">
-            <h1>Buat Pengguna Baru</h1>
-            <a href="/manage_users.php" class="button-primary" style="background-color: #5bc0de;">Batal</a>
+    <div class="app-container app-theme-white body-tabs-shadow fixed-sidebar fixed-header closed-sidebar">
+        <?php include "includes/header.php" ?>
+
+        <div class="app-main">
+            <?php include "includes/sidebar.php" ?>
+
+            <div class="app-main__outer">
+                <div class="app-main__inner">
+                    <div class="app-page-title">
+                        <div class="page-title-wrapper">
+                            <div class="page-title-heading">
+                                <div class="page-title-icon">
+                                    <i class="pe-7s-add-user icon-gradient bg-mean-fruit"></i>
+                                </div>
+                                <div>Buat Pengguna Baru
+                                    <div class="page-title-subheading">Tambahkan pengguna baru ke sistem</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="main-card mb-3 card">
+                                <div class="card-header">Form Pengguna Baru</div>
+                                <div class="card-body">
+                                    <?php if(!empty($errors)): ?>
+                                        <div class="alert alert-danger" role="alert">
+                                            <h5>Gagal membuat pengguna:</h5>
+                                            <ul>
+                                                <?php foreach($errors as $error): ?>
+                                                    <li><?= htmlspecialchars($error) ?></li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <form action="/create_user.php" method="post" class="needs-validation" novalidate>
+                                        <div class="position-relative form-group">
+                                            <label for="username">Username</label>
+                                            <input type="text" id="username" name="username" class="form-control" value="<?= htmlspecialchars($username) ?>" required>
+                                        </div>
+
+                                        <div class="position-relative form-group">
+                                            <label for="password">Password</label>
+                                            <input type="password" id="password" name="password" class="form-control" required>
+                                            <small class="form-text text-muted">Password minimal 6 karakter</small>
+                                        </div>
+
+                                        <div class="position-relative form-group">
+                                            <label for="role">Peran (Role)</label>
+                                            <select name="role" id="role" class="form-control">
+                                                <option value="kontributor" <?= $role === 'kontributor' ? 'selected' : '' ?>>Kontributor</option>
+                                                <option value="editor" <?= $role === 'editor' ? 'selected' : '' ?>>Editor</option>
+                                                <option value="admin" <?= $role === 'admin' ? 'selected' : '' ?>>Admin</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="mt-4">
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="pe-7s-check"></i> Buat Pengguna
+                                            </button>
+                                            <a href="/manage_users.php" class="btn btn-danger">
+                                                <i class="pe-7s-close"></i> Batal
+                                            </a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <?php if(!empty($errors)): ?>
-            <div class="error-container">
-                <h4>Gagal membuat pengguna:</h4>
-                <ul>
-                    <?php foreach($errors as $error): ?>
-                        <li><?= htmlspecialchars($error) ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        <?php endif; ?>
-
-        <form action="/create_user.php" method="post" class="post-form">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" value="<?= htmlspecialchars($username) ?>" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <div class="form-group">
-                <label for="role">Peran (Role)</label>
-                <select name="role" id="role">
-                    <option value="kontributor" <?= $role === 'kontributor' ? 'selected' : '' ?>>Kontributor</option>
-                    <option value="editor" <?= $role === 'editor' ? 'selected' : '' ?>>Editor</option>
-                    <option value="admin" <?= $role === 'admin' ? 'selected' : '' ?>>Admin</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <button type="submit" class="button-primary">Buat Pengguna</button>
-            </div>
-        </form>
     </div>
+
+    <?php include "includes/footer.php" ?>
+
+<!--
+  Duta Damai Kalimantan Selatan - Blog System
+  © 2025 Duta Damai Kalimantan Selatan
+
+  Menggunakan komponen dari CMS Jawara
+  © 2020 Djadjoel (MIT License)
+  Repository: https://github.com/djadjoel/cmsjawara
+-->
 </body>
 </html>

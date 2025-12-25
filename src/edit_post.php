@@ -2,6 +2,7 @@
 session_start();
 require_once "config.php";
 require_once "helpers.php";
+require_once "image_compressor.php";
 
 function create_slug($title, $link, $post_id = null) {
     $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $title)));
@@ -72,9 +73,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $new_status = 'pending';
     }
 
-    $new_image_path = $image_url; 
+    $new_image_path = $image_url;
     if (isset($_FILES["post_image"]) && $_FILES["post_image"]["error"] == 0) {
-        // ... (logika upload gambar tetap sama) ...
+        $allowed = ["jpg" => "image/jpeg", "jpeg" => "image/jpeg", "gif" => "image/gif", "png" => "image/png", "webp" => "image/webp"];
+        $filename = $_FILES["post_image"]["name"];
+        $filetype = $_FILES["post_image"]["type"];
+        $filesize = $_FILES["post_image"]["size"];
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+        if (!array_key_exists($ext, $allowed) || !in_array($filetype, $allowed)) {
+            $error = "Error: Harap pilih format gambar yang valid (JPG, PNG, GIF, WebP).";
+        }
+
+        $maxsize = 10 * 1024 * 1024;
+        if ($filesize > $maxsize) {
+            $error = "Error: Ukuran file terlalu besar (maks 10MB).";
+        }
+
+        if(empty($error)){
+            $upload_dir = "uploads/";
+
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+
+            // Hapus gambar lama jika ada
+            if (!empty($image_url) && file_exists(ltrim($image_url, '/'))) {
+                unlink(ltrim($image_url, '/'));
+            }
+
+            // Compress gambar ke ~30KB (kualitas lebih baik)
+            $compress_result = compress_uploaded_image($_FILES["post_image"], $upload_dir, 30);
+
+            if ($compress_result['success']) {
+                $new_image_path = "/" . $compress_result['path'];
+            } else {
+                $error = "Error: " . $compress_result['message'];
+            }
+        }
     }
 
     if (empty($error)) {

@@ -2,6 +2,7 @@
 session_start();
 require_once "config.php";
 require_once "helpers.php";
+require_once "image_compressor.php";
 
 // Fungsi untuk membuat slug dari judul
 function create_slug($title, $link) {
@@ -51,30 +52,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Proses upload gambar jika ada
     if (isset($_FILES["post_image"]) && $_FILES["post_image"]["error"] == 0) {
-        $allowed = ["jpg" => "image/jpeg", "jpeg" => "image/jpeg", "gif" => "image/gif", "png" => "image/png"];
+        $allowed = ["jpg" => "image/jpeg", "jpeg" => "image/jpeg", "gif" => "image/gif", "png" => "image/png", "webp" => "image/webp"];
         $filename = $_FILES["post_image"]["name"];
         $filetype = $_FILES["post_image"]["type"];
         $filesize = $_FILES["post_image"]["size"];
         $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
         if (!array_key_exists($ext, $allowed) || !in_array($filetype, $allowed)) {
-            $error = "Error: Harap pilih format gambar yang valid (JPG, PNG, GIF).";
+            $error = "Error: Harap pilih format gambar yang valid (JPG, PNG, GIF, WebP).";
         }
 
-        $maxsize = 5 * 1024 * 1024;
+        $maxsize = 10 * 1024 * 1024; // 10MB untuk original, akan di-compress ke ~1KB
         if ($filesize > $maxsize) {
-            $error = "Error: Ukuran file terlalu besar (maks 5MB).";
+            $error = "Error: Ukuran file terlalu besar (maks 10MB).";
         }
 
         if(empty($error)){
             $upload_dir = "uploads/";
-            $new_filename = uniqid('post_img_', true) . '.' . $ext;
-            $destination = $upload_dir . $new_filename;
 
-            if(move_uploaded_file($_FILES["post_image"]["tmp_name"], $destination)){
-                $image_url = "/" . $destination;
-            } else{
-                $error = "Error: Gagal memindahkan file yang di-upload.";
+            // Buat folder uploads jika belum ada
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+
+            // Compress gambar ke ~30KB (kualitas lebih baik)
+            $compress_result = compress_uploaded_image($_FILES["post_image"], $upload_dir, 30);
+
+            if ($compress_result['success']) {
+                $image_url = "/" . $compress_result['path'];
+                // Optional: simpan info kompresi untuk debugging
+                // error_log("Image compressed: " . $compress_result['final_size_kb'] . "KB, quality: " . $compress_result['quality']);
+            } else {
+                $error = "Error: " . $compress_result['message'];
             }
         }
     } elseif (isset($_FILES["post_image"]) && $_FILES["post_image"]["error"] != UPLOAD_ERR_NO_FILE) {

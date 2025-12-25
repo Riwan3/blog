@@ -1,0 +1,28 @@
+# Database Seeder - Contains sensitive credentials
+seed.php
+
+# Database Configuration - Contains database credentials
+src/config.php
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Temporary files
+*.tmp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploads directory
+uploads/*
+!uploads/.gitkeep

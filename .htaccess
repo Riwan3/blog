@@ -9,7 +9,12 @@ Options -Indexes
 # ============================================
 # 2. PROTECT CONFIG FILES
 # ============================================
-<FilesMatch "^(config\.php|security\.php|\.env|\.git|\.htaccess|\.htpasswd)">
+<FilesMatch "^(config\.php|security\.php|migrate\.php|seed\.php|\.env|\.git|\.htaccess|\.htpasswd)">
+    Require all denied
+</FilesMatch>
+
+# Protect .sql and example files
+<FilesMatch "\.(sql|example)$">
     Require all denied
 </FilesMatch>
 

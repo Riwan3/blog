@@ -113,10 +113,12 @@ if ($command === 'fresh') {
     dropAllTables($link);
 }
 
-// Run migration
-runMigration($link, 'setup.sql');
+// Run migration only if not seed-only command
+if ($command !== 'seed') {
+    runMigration($link, 'setup.sql');
+}
 
-// Run seeder if --seed flag is provided
+// Run seeder if --seed flag is provided or command is seed
 if ($seedFlag || $command === 'seed') {
     echo "\n=================================\n";
     echo "Running Database Seeder...\n";

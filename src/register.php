@@ -1,13 +1,61 @@
 <?php
 require_once "config.php";
 
+// Start session untuk menyimpan captcha
+session_start();
+
 $error = '';
 $username = $password = $confirm_password = "";
+
+// Generate random math captcha
+if (!isset($_SESSION['captcha_answer']) || $_SERVER['REQUEST_METHOD'] == 'POST') {
+    $num1 = rand(1, 10);
+    $num2 = rand(1, 10);
+    $operations = ['+', '-', '*'];
+    $operation = $operations[array_rand($operations)];
+
+    switch($operation) {
+        case '+':
+            $answer = $num1 + $num2;
+            break;
+        case '-':
+            // Pastikan hasilnya tidak negatif
+            if ($num1 < $num2) {
+                $temp = $num1;
+                $num1 = $num2;
+                $num2 = $temp;
+            }
+            $answer = $num1 - $num2;
+            break;
+        case '*':
+            $answer = $num1 * $num2;
+            break;
+    }
+
+    $_SESSION['captcha_question'] = "$num1 $operation $num2";
+    $_SESSION['captcha_answer'] = $answer;
+}
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
     $confirm_password = trim($_POST['confirm_password']);
+
+    // 1. HONEYPOT VALIDATION - Field tersembunyi yang seharusnya kosong
+    if (!empty($_POST['website'])) {
+        // Jika field 'website' terisi, kemungkinan bot
+        $error = 'Spam terdeteksi. Registrasi ditolak.';
+    }
+
+    // 2. MATH CAPTCHA VALIDATION
+    $user_captcha = isset($_POST['captcha_answer']) ? trim($_POST['captcha_answer']) : '';
+    $correct_captcha = isset($_SESSION['captcha_answer']) ? $_SESSION['captcha_answer'] : '';
+
+    if (empty($error) && empty($user_captcha)) {
+        $error = 'Tolong jawab pertanyaan matematika.';
+    } elseif (empty($error) && $user_captcha != $correct_captcha) {
+        $error = 'Jawaban matematika salah. Coba lagi.';
+    }
 
     // Validasi username
     if (empty($username)) {
@@ -57,6 +105,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $param_password = password_hash($password, PASSWORD_DEFAULT); // Hash password
 
             if (mysqli_stmt_execute($stmt)) {
+                // Clear captcha session setelah berhasil
+                unset($_SESSION['captcha_answer']);
+                unset($_SESSION['captcha_question']);
+
                 // Redirect ke halaman login setelah berhasil
                 header('Location: /login.php?registered=true');
                 exit;
@@ -128,6 +180,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         <label for="confirm_password" class="sr-only">Konfirmasi Password</label>
         <input type="password" id="confirm_password" class="form-control" placeholder="Konfirmasi password" name="confirm_password" required>
+
+        <!-- Honeypot Field (tersembunyi dari manusia, tapi terlihat bot) -->
+        <input type="text" name="website" id="website" style="display:none;" tabindex="-1" autocomplete="off">
+
+        <!-- Math CAPTCHA -->
+        <div class="form-group mt-3">
+            <label for="captcha_answer" class="text-left d-block">
+                <strong>Verifikasi Human:</strong> Berapa hasil dari
+                <span class="text-primary font-weight-bold"><?= htmlspecialchars($_SESSION['captcha_question']) ?></span> ?
+            </label>
+            <input type="number" id="captcha_answer" class="form-control" placeholder="Masukkan jawaban" name="captcha_answer" required autocomplete="off">
+        </div>
 
         <button class="btn btn-lg btn-primary btn-block mt-3" type="submit">Daftar</button>
 

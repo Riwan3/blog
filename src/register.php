@@ -7,8 +7,8 @@ session_start();
 $error = '';
 $username = $password = $confirm_password = "";
 
-// Generate random math captcha
-if (!isset($_SESSION['captcha_answer']) || $_SERVER['REQUEST_METHOD'] == 'POST') {
+// Function untuk generate captcha baru
+function generateNewCaptcha() {
     $num1 = rand(1, 10);
     $num2 = rand(1, 10);
     $operations = ['+', '-', '*'];
@@ -36,6 +36,11 @@ if (!isset($_SESSION['captcha_answer']) || $_SERVER['REQUEST_METHOD'] == 'POST')
     $_SESSION['captcha_answer'] = $answer;
 }
 
+// Generate random math captcha (hanya jika belum ada di session)
+if (!isset($_SESSION['captcha_answer'])) {
+    generateNewCaptcha();
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
@@ -53,8 +58,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if (empty($error) && empty($user_captcha)) {
         $error = 'Tolong jawab pertanyaan matematika.';
+        generateNewCaptcha(); // Generate captcha baru
     } elseif (empty($error) && $user_captcha != $correct_captcha) {
         $error = 'Jawaban matematika salah. Coba lagi.';
+        generateNewCaptcha(); // Generate captcha baru setelah jawaban salah
     }
 
     // Validasi username
